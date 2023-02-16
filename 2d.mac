@@ -1,0 +1,1122 @@
+#
+#@ HEADER
+#@ NAME         2d.mac
+#@ 
+#@ KEYWORD      fourier, 2d, finite size
+#@ 
+#@ DESCRIPTION  Use to build Ta2Se8I crystals and calculate scattering
+#@ 
+#@
+#@ PARAMETER    $0, 0
+#@
+#@ USAGE        @2d 
+#@
+#@ END
+#
+################################################################################
+#
+discus
+#
+
+variable integer,nxx
+variable integer,nyy
+variable integer,nzz
+variable integer, move_Ta
+variable integer, shift_Ta_yep
+
+nxx = $1                             # number of unit cells along each dimension of lattice
+nyy = $1
+nzz = $1
+
+
+
+#read
+#  cell Ta2Se8I.cell,nxx,nyy,nzz     # read in the desired unit cell file
+#read
+#  cell Ta2Se8I_only_Ta.cif,nxx,nyy,nzz
+read
+   cell Ta2Se8I.cif,nxx,nyy,nzz
+#read
+#   cell Ta2Se8I_only_I.cif,nxx,nyy,nzz
+
+chem
+set mode,quick,periodic
+exit
+
+variable integer,shift_Ta
+shift_Ta = 0
+if(shift_Ta==1) then                           # finds all Ta atoms based on indexing
+  chem                                         # moves Ta atoms along desired direction in lattice
+  set mode,quick,nonperiodic
+  exit
+  variable integer, incr            # how the numbers representing Ta atoms increment along the lowest ab plane in lattice
+  variable integer, multi           # adjusts according to number of unit cells in lattice  
+  variable integer, dummy           # keeps track if a Ta atom is within the lowest ab plane in lattice
+  variable integer, ii              # indexing
+  variable integer, jj              # indexing
+  variable integer, kk              # indexing 
+  variable real, xx                 # keep track of the current Ta atom x,y,z values in lattice
+  variable real, yy
+  variable real, zz
+  
+  incr = 44
+  multi = 0
+  
+  do ii=1,nxx-1,1                  # sets what multi will be based on nxx (=nyy=nzz)
+    multi = multi + (5 + 2*(ii-2))
+  enddo
+  
+  do ii=1,n[1],1               ! Loop over all atoms from 1 to n[1] in steps of 1
+    dummy = 0
+    do jj=1,multi+1,1
+      if(ii==1+(incr*(jj-1)) .or. ii==2+(incr*(jj-1))) then
+        dummy = 1
+      endif
+    enddo
+    if(dummy == 1) then                
+      xx = x[ii]
+      yy = y[ii]
+      zz = z[ii]
+      find env, ta, xx, yy, zz, 0, lat[3]*nxx**2
+      do kk=1,env[0],1
+        if(x[env[kk]] == xx .and. y[env[kk]] == yy .and. m[env[kk]] == 2 .and. ran(0)<0.5) then
+          z[env[kk]] = z[env[kk]] + 0.1
+        endif 
+      enddo
+    endif
+  enddo
+endif
+#
+#
+#
+#
+#
+variable integer,shift_Ta_ab_planes                                # shifts ab planes of Ta atoms
+shift_Ta_ab_planes = 0
+if(shift_Ta_ab_planes==1) then
+  chem
+  set mode,quick,nonperiodic
+  exit
+  variable integer, incr             # represents how the I atoms are numbered 
+  variable integer, multi            # adjusts according to number of unit cells in lattice
+  variable integer, dummy            # keeps track if we have found a desired I atom
+  variable integer, ii               # indexing variable
+  variable integer, jj
+  variable integer, kk
+  variable real, xx                  
+  variable real, yy
+  variable real, zz
+  variable real, x1                  
+  variable real, y1
+  variable real, z1
+  
+  
+  incr = 4                   #  4 if lattice only contains I, 44 for all atoms
+  multi = 0
+  
+  do ii=1,nxx-1,1            # sets multi based on nxx (=nyy=nzz)
+    multi = multi + (5 + 2*(ii-2))
+  enddo
+  
+  xx = x[1]
+  yy = y[1]
+  zz = z[1]
+  dummy = 0
+  
+  do ii=1,n[1],1
+    if(x[ii]==xx .and. y[ii]==yy .and. (m[ii] == 1 .or. m[ii] == 2) .and. ran(0) > 0.5) then
+      z1 = z[ii]
+      do jj=1,n[1],1               
+        if(z[jj]==z1 .and. (m[ii] == 1 .or. m[ii] == 2) .and. jj /= ii) then
+          z[jj] = z[jj] + 0.1*(-1)**dummy
+          #replace jj, fe,1.00
+        endif
+      enddo
+      z[ii] = z[ii] + 0.1*(-1)**dummy
+      dummy = dummy + 1
+    endif
+  enddo
+endif
+#
+#
+#
+#
+variable integer,shift_Ta_ab_planes_env                                # shifts ab planes of Ta atoms
+shift_Ta_ab_planes_env = 0
+if(shift_Ta_ab_planes_env==1) then
+  chem
+  set mode,quick,nonperiodic
+  exit
+  variable integer, incr             # represents how the I atoms are numbered 
+  variable integer, multi            # adjusts according to number of unit cells in lattice
+  variable integer, dummy            # keeps track if we have found a desired I atom
+  variable integer, ii               # indexing variable
+  variable integer, jj
+  variable integer, kk
+  variable real, xx                  # keeps track of current I atom x,y,z values in lattice
+  variable real, yy
+  variable real, zz
+  
+  incr = 4                   #  4 if lattice only contains I, 44 for all atoms
+  multi = 0
+  
+  do ii=1,nxx-1,1            # sets multi based on nxx (=nyy=nzz)
+    multi = multi + (5 + 2*(ii-2))
+  enddo
+  
+  find env, Ta, x[1], y[1], z[1], 0, lat[3]*nxx**2
+  
+  xx = x[1]
+  yy = y[1]
+  zz = z[1]
+  dummy = 0
+  
+  do kk=1,env[0],1
+    if(x[env[ii]]==xx .and. y[env[ii]]==yy) then
+      do jj=1,env[0],1               
+        if(z[env[jj]]==z[env[ii]]) then
+          z[env[jj]] = z[env[jj]] + 0.1*(-1)**dummy
+          replace env[jj], fe,1.00
+          dummy = dummy + 1
+        endif
+      enddo
+    endif
+  enddo
+endif
+#
+#
+#
+#
+#
+#
+variable integer,shift_I 
+shift_I = 0
+if(shift_I==1) then
+  chem
+  set mode,quick,nonperiodic
+  exit
+  variable integer, incr             # represents how the I atoms are numbered 
+  variable integer, multi            # adjusts according to number of unit cells in lattice
+  variable integer, dummy            # keeps track if we have found a desired I atom
+  variable integer, ii               # indexing variable
+  variable integer, jj
+  variable integer, kk
+  variable real, xx                  # keeps track of current I atom x,y,z values in lattice
+  variable real, yy
+  variable real, zz
+  
+  incr = 4                   #  4 if lattice only contains I, 44 for all atoms
+  multi = 0
+  
+  do ii=1,nxx-1,1            # sets multi based on nxx (=nyy=nzz)
+    multi = multi + (5 + 2*(ii-2))
+  enddo
+  
+  do ii=1,n[1],1               ! Loop over all atoms from 1 to n[1] in steps of 1
+    dummy = 0
+    do jj=1,multi+1,1
+      if(ii==(incr*jj)-3 .or. ii==(incr*jj)) then
+        dummy = 1
+      endif
+    enddo
+    if(dummy == 1) then
+      variable integer,yep
+      yep = 1
+      xx = x[ii]
+      yy = y[ii]
+      zz = z[ii]
+      find env, I, xx, yy, zz, 0, lat[3]*nxx**2
+      do kk=1,env[0],1
+        if(x[env[kk]] == xx .and. y[env[kk]] == yy) then
+          if(ran(0) > 0.5) then
+            z[env[kk]] = z[env[kk]] + 0.1
+          endif
+        endif 
+      enddo
+    endif
+  enddo
+endif
+#
+#
+#
+#
+#
+variable integer,shift_I_ab_planes
+shift_I_ab_planes = 0
+if(shift_I_ab_planes==1) then
+  chem
+  set mode,quick,nonperiodic
+  exit
+  variable integer, incr
+  variable integer, multi
+  variable integer, dummy
+  variable integer, ii
+  variable integer, jj
+  variable integer, kk
+  variable real, xx
+  variable real, yy
+  variable real, zz
+  variable real, x1
+  variable real, y1
+  variable real, z1
+  variable real, z2
+  variable integer, sand
+  variable integer, lol
+  incr = 64                 
+  multi = nxx * 2
+  sand = 1
+  lol = 1
+  
+  xx = x[1] #41 for all atoms, 1 for only I
+  yy = y[1]
+  zz = z[1]
+  x1 = x[4] #44 for all atoms, 4 for only I
+  y1 = y[4]
+  z1 = z[4]
+  
+  find env, I, xx, yy, zz, 0, lat[3]*nxx**2
+  
+  do kk=1,env[0],1
+    if(((x[env[kk]] == x1 .and. y[env[kk]] == y1)) .and. ran(0)>0.5) then
+      z2 = z[env[kk]]
+      do jj=1,env[0],1
+        if(z[env[jj]] == z2) then
+          z[env[jj]] = z[env[jj]] + 0.1*(-1)**sand
+          #replace env[jj], fe,1.00
+          #remove env[jj]
+        endif
+      enddo   
+    endif
+  sand = sand + 1
+  enddo
+endif
+#
+#
+#
+#
+#
+variable integer,void_I_ab_planes
+void_I_ab_planes = 0
+if(void_I_ab_planes==1) then
+  chem
+  set mode,quick,nonperiodic
+  exit
+  variable integer, incr
+  variable integer, multi
+  variable integer, dummy
+  variable integer, ii
+  variable integer, jj
+  variable integer, kk
+  variable integer, ww
+  variable integer, gg
+  variable real, xx
+  variable real, yy
+  variable real, zz
+  variable real, x1
+  variable real, y1
+  variable real, z1
+  variable real, z2
+  variable real, xx1
+  variable real, yy1
+  variable real, zz1
+  variable integer, sand
+  variable integer, lol
+  incr = 64                 
+  multi = nxx * 2
+  sand = 1
+  lol = 1
+  
+  xx = x[1] #41 for all atoms, 1 for only I
+  yy = y[1]
+  zz = z[1]
+  x1 = x[4] #44 for all atoms, 4 for only I
+  y1 = y[4]
+  z1 = z[4]
+  
+  find env, I, xx, yy, zz, 0, lat[3]*nxx**2
+  
+  do kk=1,env[0],1
+    if(((x[env[kk]] == x1 .and. y[env[kk]] == y1) .or. (x[env[kk]] == xx .and. y[env[kk]] == yy)) .and. ran(0)>0.8) then
+      z2 = z[env[kk]]
+      do jj=1,env[0],1
+        if(z[env[jj]] == z2) then
+          #z[env[jj]] = z[env[jj]] + 0.1*(-1)**sand
+          #replace env[jj], fe,1.00
+          remove env[jj]
+        endif
+      enddo   
+    endif
+  sand = sand + 1
+  enddo
+  
+  find env, VOID, xx, yy, zz, 0, lat[3]*nxx**2
+  do ww=1,env[0],1
+    xx1 = x[env[ww]]
+    yy1 = y[env[ww]]
+    zz1 = z[env[ww]]
+    find env, I, xx1, yy1, zz1, 0, 4.1
+    do gg=1,env[0],1
+      if(x[env[gg]]==xx1 .and. y[env[gg]]==yy1) then
+        if(z[env[gg]] < zz1) then
+          z[env[gg]] = z[env[gg]] + (0.5-0.34490)
+        else
+          z[env[gg]] = z[env[gg]] - (0.5-0.34490)
+        endif
+      endif
+    enddo
+    find env, void, xx, yy, zz, 0, lat[3]*nxx**2
+  enddo
+endif
+#
+#
+#
+#
+#
+#
+#
+variable integer, move_I 
+move_I = 0
+if(move_I == 1) then                              # removes I atoms and shifts surrounding I atoms inwards
+  chem
+  set mode,quick,nonperiodic
+  exit
+  variable integer, jj
+  variable integer, kk
+  variable integer, rand1
+  variable real, xx
+  variable real, yy
+  variable real, zz
+  variable real, atom_number                     # set to the atom number representing I atoms
+                                                 # changes based on number of different atoms in lattice
+  atom_number = 1
+  #find env, I, 0, 0, 0, 0, lat[3]*nxx**2
+  
+  do jj=1,n[1],1
+    if(m[jj]==atom_number .and. ran(0) < 0.05) then
+      xx = x[jj]
+      yy = y[jj]
+      zz = z[jj]
+      remove jj
+      do kk=1,n[1],1
+        if(abs(z[kk] - zz) <= 0.35 .and. abs(z[kk] - zz) > 0.0 .and. x[kk]==xx .and. y[kk]==yy) then
+          if(z[kk] < zz) then
+            z[kk] = z[kk] + (0.5-0.34490)
+          else
+            z[kk] = z[kk] - (0.5-0.34490)
+          endif
+        endif
+      enddo
+    endif
+  enddo
+endif
+#
+#
+#
+#
+#
+
+chem
+set mode,quick,periodic
+exit
+
+# for experimental, satellites are spaced by 0.2 along l
+# and spaced as 0.1 along the h and k axes
+
+# density wave                                  # playground for messing with density waves
+variable integer, density_wave
+density_wave=0
+if(density_wave==1) then
+  wave
+    dens
+    func sinus
+    len 12.99593400*4
+    plow 0.8
+    phigh 1.0
+    vect 0,0,1
+    phase 0
+    repl i,void
+    run
+  exit
+  variable integer, jj
+  variable real, xx
+  variable real, yy
+  variable real, zz
+  variable integer, kk
+  do jj=1,n[1],1
+    if(m[jj]==0) then
+      xx = x[jj]
+      yy = y[jj]
+      zz = z[jj]
+      find env, I, xx, yy, zz, 0, 4.1
+      do kk=1,env[0],1
+        if(x[env[kk]]==xx .and. y[env[kk]]==yy) then
+          if(z[env[kk]] < zz) then
+            z[env[kk]] = z[env[kk]] + (0.5-0.34490)
+          else
+            z[env[kk]] = z[env[kk]] - (0.5-0.34490)
+          endif
+        endif
+      enddo
+    endif
+  enddo
+endif
+  #
+  #
+  #
+  #
+  #
+variable integer, density_wave1
+density_wave1=1
+if(density_wave1==1) then
+  read
+    cell Ta2Se8I.cif,nxx,nyy,nzz
+  #read
+  #  cell Ta2Se8I_only_I.cif,nxx,nyy,nzz
+  wave
+    dens
+    func sinus
+    len 12.99593400            #12.99593400*1.071
+    plow 0.0
+    phigh 1.0
+    vect 0.41421,1,1    #0.41421,1,0
+    phase 0
+    repl all,void
+    run
+  exit
+  save domain_wave.stru
+endif
+  #
+  #
+  #
+  #
+variable integer, density_wave2
+density_wave2=1
+if(density_wave2==1) then
+  read
+    cell Ta2Se8I.cif,nxx,nyy,nzz
+  #read
+  #  cell Ta2Se8I_only_I.cif,nxx,nyy,nzz
+  wave
+    dens
+    func sinus
+    len 12.99593400
+    plow 0.0
+    phigh 1.0
+    vect -0.41421,1,1
+    phase 0
+    repl all,void
+    run
+  exit
+  save domain_wave1.stru
+endif
+  #
+  #
+variable integer, density_wave3
+density_wave3=1
+if(density_wave3==1) then
+  read
+    cell Ta2Se8I.cif,nxx,nyy,nzz
+  #read
+  #  cell Ta2Se8I_only_I.cif,nxx,nyy,nzz
+  wave
+    dens
+    func sinus
+    len 12.99593400
+    plow 0.0
+    phigh 1.0
+    vect 1,0.41421,1
+    phase 0
+    repl all,void
+    run
+  exit
+  save domain_wave2.stru
+endif
+  #
+  #
+variable integer, density_wave4
+density_wave4=1
+if(density_wave4==1) then
+  read
+    cell Ta2Se8I.cif,nxx,nyy,nzz
+  #read
+  #  cell Ta2Se8I_only_I.cif,nxx,nyy,nzz
+  wave
+    dens
+    func sinus
+    len 12.99593400
+    plow 0.0
+    phigh 1.0
+    vect -1,0.41421,1
+    phase 0
+    repl all,void
+    run
+  exit
+  save domain_wave3.stru
+endif
+#
+#
+#
+variable integer, density_wave5
+density_wave5=1
+if(density_wave5==1) then
+  read
+    cell Ta2Se8I.cif,nxx,nyy,nzz
+  #read
+  #  cell Ta2Se8I_only_I.cif,nxx,nyy,nzz
+  wave
+    dens
+    func sinus
+    len 12.99593400             #12.99593400*1.071
+    plow 0.0
+    phigh 1.0
+    vect 0.41421,1,-1    #0.41421,1,0
+    phase 0
+    repl all,void
+    run
+  exit
+  save domain_wave4.stru
+endif
+  #
+  #
+  #
+  #
+variable integer, density_wave6
+density_wave6=1
+if(density_wave6==1) then
+  read
+    cell Ta2Se8I.cif,nxx,nyy,nzz
+  #read
+  #  cell Ta2Se8I_only_I.cif,nxx,nyy,nzz
+  wave
+    dens
+    func sinus
+    len 12.99593400
+    plow 0.0
+    phigh 1.0
+    vect -0.41421,1,-1
+    phase 0
+    repl all,void
+    run
+  exit
+  save domain_wave5.stru
+endif
+  #
+  #
+variable integer, density_wave7
+density_wave7=1
+if(density_wave7==1) then
+  read
+    cell Ta2Se8I.cif,nxx,nyy,nzz
+  #read
+  #  cell Ta2Se8I_only_I.cif,nxx,nyy,nzz
+  wave
+    dens
+    func sinus
+    len 12.99593400
+    plow 0.0
+    phigh 1.0
+    vect 1,0.41421,-1
+    phase 0
+    repl all,void
+    run
+  exit
+  save domain_wave6.stru
+endif
+  #
+  #
+variable integer, density_wave8
+density_wave8=1
+if(density_wave8==1) then
+  read
+    cell Ta2Se8I.cif,nxx,nyy,nzz
+  #read
+  #  cell Ta2Se8I_only_I.cif,nxx,nyy,nzz
+  wave
+    dens
+    func sinus
+    len 12.99593400
+    plow 0.0
+    phigh 1.0
+    vect -1,0.41421,-1
+    phase 0
+    repl all,void
+    run
+  exit
+  save domain_wave7.stru
+endif
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+# displacement wave                                             # playground for messing with displacement waves
+variable integer, disp_wave
+disp_wave=0
+if(disp_wave==1) then 
+  read
+    cell Ta2Se8I.cif,nxx,nyy,nzz
+  #read
+  #  cell Ta2Se8I_only_I.cif,nxx,nyy,nzz
+  wave
+    func sinus
+    acco
+    long # trans
+    len 12.99593400*1.071 # 12*3
+    vect 0.41421,1,0 # 0.0641,0.0641,0.0641                        
+    amp 0.13                                 
+    osci -1,1,0                                      
+    phase 0
+    sel all
+    run
+  exit
+  #boundary hkl, -1, 1, 0, 0 
+  #boundary hkl, 1, 1, 0, 0
+  save domain_wave.stru
+endif
+#
+#
+#
+variable integer, disp_wave1
+disp_wave1=0
+if(disp_wave1==1) then
+  read
+    cell Ta2Se8I.cif,nxx,nyy,nzz
+  #read
+  #  cell Ta2Se8I_only_I.cif,nxx,nyy,nzz
+  wave
+    func sinus
+    acco
+    long
+    len 12.99593400*1.071
+    vect -0.41421,1,0 # -0.0641,-0.0641,0.0641
+    amp 0.13
+    osci 1,-1,0
+    phase 0
+    sel all
+    run
+  exit
+  #boundary hkl, -1, 1, 0, 0 
+  #boundary hkl, 1, 1, 0, 0 
+  save domain_wave1.stru
+endif
+#
+#
+#
+variable integer, disp_wave2
+disp_wave2=0
+if(disp_wave2==1) then
+  read
+    cell Ta2Se8I.cif,nxx,nyy,nzz
+  #read
+  #  cell Ta2Se8I_only_I.cif,nxx,nyy,nzz
+  wave
+    func sinus
+    acco
+    long
+    len 12.99593400*1.071
+    vect 1,0.41421,0 # 0.0641,-0.0641,0.0641
+    amp 0.13
+    osci 1,1,0
+    phase 0
+    sel all
+    run
+  exit
+  #boundary hkl, -1, 1, 0, 0 
+  #boundary hkl, 1, 1, 0, 0 
+  save domain_wave2.stru
+endif
+#
+#
+#
+variable integer, disp_wave3
+disp_wave3=0
+if(disp_wave3==1) then
+  read
+    cell Ta2Se8I.cif,nxx,nyy,nzz
+  #read
+  #  cell Ta2Se8I_only_I.cif,nxx,nyy,nzz
+  wave
+    func sinus
+    acco
+    long
+    len 12.99593400*1.071
+    vect -1,0.41421,0 #-0.0641,0.0641,0.0641
+    amp 0.13
+    osci -1,-1,0
+    phase 0
+    sel all
+    run
+  exit
+  #boundary hkl, -1, 1, 0, 0 
+  #boundary hkl, 1, 1, 0, 0 
+  save domain_wave3.stru
+endif
+#
+#
+#
+#
+shift_I_ab_planes = 0
+if(shift_I_ab_planes==1) then
+  read
+    cell Ta2Se8I.cif,nxx,nyy,nzz
+  read
+    cell Ta2Se8I_only_I.cif,nxx,nyy,nzz
+  chem
+  set mode,quick,nonperiodic
+  exit
+  variable integer, incr
+  variable integer, multi
+  variable integer, dummy
+  variable integer, ii
+  variable integer, jj
+  variable integer, kk
+  variable real, xx
+  variable real, yy
+  variable real, zz
+  variable real, x1
+  variable real, y1
+  variable real, z1
+  variable real, z2
+  variable integer, sand
+  variable integer, lol
+  incr = 64                 
+  multi = nxx * 2
+  sand = 1
+  lol = 1
+  
+  xx = x[1] #41 for all atoms, 1 for only I
+  yy = y[1]
+  zz = z[1]
+  x1 = x[4] #44 for all atoms, 4 for only I
+  y1 = y[4]
+  z1 = z[4]
+  
+  find env, I, xx, yy, zz, 0, lat[3]*nxx**2
+  
+  do kk=1,env[0],1
+    if(((x[env[kk]] == x1 .and. y[env[kk]] == y1)) .and. ran(0)>0.5) then
+      z2 = z[env[kk]]
+      do jj=1,env[0],1
+        if(z[env[jj]] == z2) then
+          z[env[jj]] = z[env[jj]] + 1*(-1)**sand
+          #replace env[jj], fe,1.00
+          #remove env[jj]
+        endif
+      enddo   
+    endif
+  sand = sand + 1
+  enddo
+endif
+#
+#
+#
+#
+#
+variable integer, domains                                   # use to create spherical domains for modulations of the crystal
+domains=0
+if(domains==1) then
+  #read
+  #  cell Ta2Se8I.cif,nxx,nyy,nzz
+  #read
+  #  cell Ta2Se8I_only_I.cif,nxx,nyy,nzz
+  variable integer,loop
+  variable integer,dmax
+  variable integer,dia
+  variable integer,dox
+  variable integer,doy
+  variable integer,doz
+  
+  variable real,width
+  variable real,abst
+  variable real,damp
+  variable integer,atm
+  variable integer, do_damp
+  
+  do_damp = 1
+  width = 80
+  
+  dmax=4
+  do loop=1,dmax
+    dia=2.5
+    if(loop==1) then
+      dox = 2.5
+      doy = 2.5
+      doz = 0
+    endif
+    if(loop==2) then
+      dox = -2.5
+      doy = 2.5
+      doz = 0
+    endif
+    if(loop==3) then
+      dox = 2.5
+      doy = -2.5
+      doz = 0
+    endif
+    if(loop==4) then
+      dox = -2.5
+      doy = -2.5
+      doz = 0
+    endif
+    
+    domain
+      reset
+      mode pseudo
+      input domain_origins.pseudo
+      assign char,d1,sphere
+      assign fuzzy,d1,1.5
+      if(loop==1) then
+        assign content,d1,domain_wave.stru
+      elseif(loop==2) then
+        assign content,d1,domain_wave1.stru
+      elseif(loop==3) then
+        assign content,d1,domain_wave2.stru
+      elseif(loop==4) then
+        assign content,d1,domain_wave3.stru
+      endif
+        
+      assign shape, d1, 1, dia, 0.0, 0.0, dox
+      assign shape, d1, 2, 0.0, dia, 0.0, doy
+      assign shape, d1, 3, 0.0, 0.0, dia, doz
+     
+      assign orient, d1, 1, 1.0, 0.0, 0.0, 0.0
+      assign orient, d1, 2, 0.0, 1.0, 0.0, 0.0
+      assign orient, d1, 3, 0.0, 0.0, 1.0, 0.0
+      show
+      run
+    exit
+    
+    if(do_damp==1) then
+      do atm=1,n[1]
+        abst=blen(x[atm]-dox,y[atm]-doy,z[atm]-doz)
+        damp=exp(-4*ln(2)*abst**2/width**2)
+        find env, void, x[atm], y[atm], z[atm], 0, 1
+        if(env[0]>0) then
+          x[atm]=x[env[1]]+damp*(x[atm]-x[env[1]])
+          y[atm]=y[env[1]]+damp*(y[atm]-y[env[1]])
+          z[atm]=z[env[1]]+damp*(z[atm]-z[env[1]])
+        endif
+      enddo
+      purge
+    endif
+    
+  enddo
+endif
+#     
+#
+#
+#
+#
+#
+#
+variable integer, domains_cube                                   # use to create cubic domains for modulations of the crystal
+domains_cube=1
+if(domains_cube==1) then
+  read
+    cell Ta2Se8I.cif,nxx,nyy,nzz
+  #read
+  #  cell Ta2Se8I_only_I.cif,nxx,nyy,nzz
+  variable integer,loop
+  variable integer,dmax
+  variable integer,side_x
+  variable integer,side_y
+  variable integer,side_z
+  variable integer,dox
+  variable integer,doy
+  variable integer,doz
+ 
+  variable real,width
+  variable real,abst
+  variable real,damp
+  variable integer,atm
+  variable integer, do_damp_disp
+  variable integer, do_damp_dens
+  variable integer, disp_dens
+  
+  do_damp_dens = 0
+  do_damp_disp = 0
+  disp_dens = 0
+  width = 80
+  
+  side_x = 2.5
+  side_y = 2.5
+  side_z = 2.5
+  
+  dmax=8
+  do loop=1,dmax
+    if(loop==1) then
+      dox = 2.5
+      doy = 2.5
+      doz = 2.5
+    elseif(loop==2) then
+      dox = -2.5
+      doy = 2.5
+      doz = 2.5
+    elseif(loop==3) then
+      dox = 2.5
+      doy = -2.5
+      doz = 2.5
+    elseif(loop==4) then
+      dox = -2.5
+      doy = -2.5
+      doz = 2.5
+    elseif(loop==5) then
+      dox = 2.5
+      doy = 2.5
+      doz = -2.5
+    elseif(loop==6) then
+      dox = -2.5
+      doy = 2.5
+      doz = -2.5
+    elseif(loop==7) then
+      dox = 2.5
+      doy = -2.5
+      doz = -2.5
+    elseif(loop==8) then
+      dox = -2.5
+      doy = -2.5
+      doz = -2.5
+    endif
+    
+    domain
+      reset
+      mode pseudo
+      input domain_cube_origins.pseudo
+      assign char,d1,cube
+      assign fuzzy,d1,1.5
+      if(loop==1) then
+        assign content,d1,domain_wave.stru
+      elseif(loop==2) then
+        assign content,d1,domain_wave1.stru
+      elseif(loop==3) then
+        assign content,d1,domain_wave2.stru
+      elseif(loop==4) then
+        assign content,d1,domain_wave3.stru
+      elseif(loop==5) then
+        assign content,d1,domain_wave4.stru
+      elseif(loop==6) then
+        assign content,d1,domain_wave5.stru
+      elseif(loop==7) then
+        assign content,d1,domain_wave6.stru
+      elseif(loop==8) then
+        assign content,d1,domain_wave7.stru
+      endif
+        
+        
+      assign shape, d1, 1, side_x, 0.0, 0.0, dox
+      assign shape, d1, 2, 0.0, side_y, 0.0, doy
+      assign shape, d1, 3, 0.0, 0.0, side_z, doz
+     
+      assign orient, d1, 1, 1.0, 0.0, 0.0, 0.0
+      assign orient, d1, 2, 0.0, 1.0, 0.0, 0.0
+      assign orient, d1, 3, 0.0, 0.0, 1.0, 0.0
+      show
+      run
+    exit
+    
+    if(do_damp_disp==1) then
+      do atm=1,n[1]
+        abst=blen(x[atm]-dox,y[atm]-doy,z[atm]-doz)
+        damp=exp(-4*ln(2)*abst**2/width**2)
+        find env, void, x[atm], y[atm], z[atm], 0, 0.5
+        if(env[0]>0) then
+          x[atm]=x[env[1]]+damp*(x[atm]-x[env[1]])
+          y[atm]=y[env[1]]+damp*(y[atm]-y[env[1]])
+          z[atm]=z[env[1]]+damp*(z[atm]-z[env[1]])
+        endif
+      enddo
+      purge
+    endif
+    
+    if(do_damp_dens==1) then
+      do atm=1,n[1]
+        abst=blen(x[atm]-dox,y[atm]-doy,z[atm]-doz)
+        damp=exp(-4*ln(2)*abst**2/width**2)
+        if(m[atm]==0 .and. ran(0)>damp) then
+          replace atm,I
+        endif
+      enddo
+      purge
+    endif
+    
+    if(disp_dens==1) then
+      do atm=1,n[1]
+        if(m[atm]==0) then
+          abst=blen(x[atm]-dox,y[atm]-doy,z[atm]-doz)
+          damp=exp(-4*ln(2)*abst**2/width**2)
+          find env, all, x[atm], y[atm], z[atm], 0, 0.2   
+          if(((x[atm]-x[env[2]])**2 + (y[atm]-y[env[2]])**2 + (z[atm]-z[env[2]])**2) > 0.010**2 .and. ran(0)<damp) then
+            remove env[2]
+          else
+            x[env[2]] = x[atm]
+            y[env[2]] = y[atm]
+            z[env[2]] = z[atm]
+          endif
+        endif
+      enddo
+      purge
+    endif
+    
+  enddo
+endif
+#
+#
+#
+#
+#
+#
+#
+#
+purge
+save Ta2Se8I.stru
+@plotcif.mac Ta2Se8I
+@plot.mac Ta2Se8I       #  run macro plot.mac with parameter <example3>
+#
+fourier                  # switch to the DISCUS fourier menu
+  xray                   # select x-rays
+  #ll -20, -20, -20       # for kl planes
+  #lr 10, -10, -10         
+  #ul -10, -10, 10       
+  #tl -10, 10, -10  
+  ll  -10,-10,-10         # for hk planes
+  lr  10,-10,-10          # delta_h = 1/N where N = # of unit cells along one dimension
+  ul  -10,10,-10          # set the grid spacing in reciprical space to be equal to 1/N to remove finite size effects
+  tl  -10,-10,10
+  na 201                 # calculate with ___ points along abscissa
+  no 201                 # calculate with ___ points along ordinate
+  nt 201
+  temp off               # whether or not to use atomic displacement parameters
+  disp off               # switch anomalous dispersion off
+  wvle 0.71              # set the wave length (Angstrom)
+  abs h                  # use h for x-axis in KUPLOT
+  ord k                  # use k for y-axis in KUPLOT 
+  #set aver,50             # determines how much average intensity to subtract (can remove bragg peaks)
+  #lots eli, 7, 7, 7, 150, yes        # uses zones of the lattice (lots) rather than whole lattice to calculate scattering
+  show                   # show current settings
+  run                    # do the calculation
+exit                     # go back to the main DISCUS menu
+#
+output                   # switch to the DISCUS output menu
+  outf Ta2Se8I.hdf5     # write data into file 
+  value inte             # write intensities
+  form hdf5              # use standard format
+  run                    # perform the actual write process
+exit                     # go back to the main DISCUS menu
+
+output                   # switch to the DISCUS output menu
+  outf Ta2Se8I.inte     # write data into many files each representing 2D data slice
+  value inte             # write intensities
+  form stan              # use standard format
+  run                    # perform the actual write process
+exit  
+   
+branch kuplot
+  @k2d.mac
+  exit
+exit
